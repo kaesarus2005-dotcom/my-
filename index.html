@@ -809,13 +809,14 @@ body.mobile-build .result-actions button{min-height:50px}
   }
 
   function tone(freq, duration, volume, type='sine', delay=0) {
+    // Mobile: stronger interaction SFX. BGM volume is unchanged; hit/miss feedback is intentionally forward.
     const ctx = ensureAudioCtx();
     if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = type;
     osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
-    gain.gain.setValueAtTime(Math.max(.0001, volume * state.sfxVolume), ctx.currentTime + delay);
+    gain.gain.setValueAtTime(Math.max(.0001, Math.min(.30, volume * state.sfxVolume * 2.4)), ctx.currentTime + delay);
     gain.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + delay + duration);
     osc.connect(gain); gain.connect(ctx.destination);
     osc.start(ctx.currentTime + delay);
@@ -830,11 +831,11 @@ body.mobile-build .result-actions button{min-height:50px}
     const elapsed = state.running ? (performance.now()-state.startPerf) : 0;
     const feverLift = state.feverUntil > elapsed ? 1.12 : 1;
     const f = base * pitch * feverLift;
-    tone(f, .055, .034, 'triangle');
-    tone(f * 1.5, .04, .015, 'sine', .012);
+    tone(f, .055, .065, 'triangle');
+    tone(f * 1.5, .04, .030, 'sine', .012);
     if (state.combo > 0 && state.combo % 8 === 0) {
-      tone(f*.75,.09,.020,'sine',.018);
-      tone(f*1.25,.08,.018,'triangle',.030);
+      tone(f*.75,.09,.035,'sine',.018);
+      tone(f*1.25,.08,.032,'triangle',.030);
     }
   }
   function setMusicLevel(next, announce=false) {
@@ -881,14 +882,14 @@ body.mobile-build .result-actions button{min-height:50px}
   }
 
   function missSound() {
-    tone(125, .12, .05, 'sawtooth');
-    tone(78, .19, .025, 'square', .018);
+    tone(125, .12, .075, 'sawtooth');
+    tone(78, .19, .040, 'square', .018);
   }
   function stageSound() {
-    tone(520, .05, .025, 'triangle');
-    tone(690, .07, .022, 'triangle', .055);
+    tone(520, .05, .040, 'triangle');
+    tone(690, .07, .035, 'triangle', .055);
   }
-  function selectSound() { tone(430, .045, .02, 'triangle'); }
+  function selectSound() { tone(430, .045, .032, 'triangle'); }
 
   function getMusic() {
     if (!music) {
@@ -1552,7 +1553,7 @@ body.mobile-build .result-actions button{min-height:50px}
     if(delta>1100){ showJudgement(n.el,'MISS'); removeNote(n.id); registerMiss('GOLD MISS'); return; }
     state.goldHits++; state.combo++; state.maxCombo=Math.max(state.maxCombo,state.combo);
     const mult=isFeverActive(elapsed)?2:1; state.score+=(500+Math.min(600,state.combo*4))*mult;
-    tone(1046,.07,.025,'triangle');tone(1568,.1,.015,'sine',.035);
+    tone(1046,.07,.040,'triangle');tone(1568,.1,.025,'sine',.035);
     burstAt(n.el,'PERFECT');showJudgement(n.el,'GOLD +500');removeNote(n.id);maybeStartFever(elapsed);
   }
 
@@ -1577,7 +1578,7 @@ body.mobile-build .result-actions button{min-height:50px}
     const goalEl=document.createElement('div');goalEl.className='slider-goal';goalEl.style.left=`${goal[0]}%`;goalEl.style.top=`${goal[1]}%`;goalEl.style.width=`${goalSize}px`;goalEl.style.height=`${goalSize}px`;goalEl.innerHTML='<span>END</span>';board.appendChild(goalEl);
     const note=document.createElement('button');note.type='button';note.className='rhythm-note slider-note';note.style.left=`${start[0]}%`;note.style.top=`${start[1]}%`;note.style.width=`${size}px`;note.style.height=`${size}px`;note.style.zIndex=String(100000-id);note.innerHTML='<span class="note-core"><b class="hold-label">SLIDE</b></span><span class="approach-ring"></span>';board.appendChild(note);
     const data={id,el:note,goalEl,trackEl:track,type:'slider',fake:false,moving:false,hitAt,spawnAt:hitAt-d.approach,expireAt:hitAt+d.late+900,bornAt:performance.now()-state.startPerf,xPct:start[0],yPct:start[1],startPct:start.slice(),goalPct:goal.slice(),size,goalSize,dragging:false,pointerId:null,lastElapsed:null};state.activeNotes.set(id,data);state.totalNotes++;
-    note.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(!state.running)return;data.dragging=true;data.pointerId=e.pointerId;note.classList.add('held');try{note.setPointerCapture(e.pointerId)}catch(_){};tone(410,.035,.018,'triangle')});
+    note.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(!state.running)return;data.dragging=true;data.pointerId=e.pointerId;note.classList.add('held');try{note.setPointerCapture(e.pointerId)}catch(_){};tone(410,.035,.030,'triangle')});
     note.addEventListener('pointermove',e=>{if(!data.dragging||e.pointerId!==data.pointerId||!state.running)return;e.preventDefault();e.stopPropagation();const r=board.getBoundingClientRect(),px=Math.max(size/2,Math.min(r.width-size/2,e.clientX-r.left)),py=Math.max(size/2+24,Math.min(r.height-size/2,e.clientY-r.top));data.xPct=px/r.width*100;data.yPct=py/r.height*100;note.style.left=`${data.xPct}%`;note.style.top=`${data.yPct}%`;const ax=data.goalPct[0]-data.startPct[0],ay=data.goalPct[1]-data.startPct[1],bx=data.xPct-data.startPct[0],by=data.yPct-data.startPct[1],den=ax*ax+ay*ay||1,t=Math.max(0,Math.min(1,(ax*bx+ay*by)/den)),fill=track.querySelector('.slider-fill');if(fill)fill.style.width=`${t*100}%`;goalEl.classList.toggle('near',t>.82)});
     const release=e=>{if(!data.dragging||e.pointerId!==data.pointerId||!state.activeNotes.has(id))return;e.preventDefault();e.stopPropagation();data.dragging=false;note.classList.remove('held');const gr=goalEl.getBoundingClientRect(),nr=note.getBoundingClientRect(),dist=Math.hypot((nr.left+nr.width/2)-(gr.left+gr.width/2),(nr.top+nr.height/2)-(gr.top+gr.height/2));if(dist<=goalSize*.64)hitSpecialNote(data,performance.now()-state.startPerf,'SLIDE');else showJudgement(note,'SLIDE')};note.addEventListener('pointerup',release);note.addEventListener('pointercancel',release);
   }
@@ -1585,7 +1586,7 @@ body.mobile-build .result-actions button{min-height:50px}
   function hitSpecialNote(n, elapsed, label) {
     if(!state.running||!state.activeNotes.has(n.id))return; const delta=Math.abs(elapsed-n.hitAt); let judgement,points;
     if(delta<=260){judgement='PERFECT';points=360;state.perfect++;}else if(delta<=500){judgement='GREAT';points=285;state.great++;}else if(delta<=760){judgement='GOOD';points=210;state.good++;}else{judgement='OK';points=130;state.ok++;}
-    if(label==='FLICK')state.flickHits++;if(label==='SLIDE')state.sliderHits++;state.hits++;state.combo++;state.maxCombo=Math.max(state.maxCombo,state.combo);const mult=isFeverActive(elapsed)?2:1;state.score+=(points+Math.min(500,state.combo*3))*mult;hitSound(judgement);tone(label==='FLICK'?1080:880,.055,.018,'sine',.015);burstAt(n.el,judgement);showJudgement(n.el,label==='FLICK'?'FLICK':judgement);removeNote(n.id);maybeStartFever(elapsed);
+    if(label==='FLICK')state.flickHits++;if(label==='SLIDE')state.sliderHits++;state.hits++;state.combo++;state.maxCombo=Math.max(state.maxCombo,state.combo);const mult=isFeverActive(elapsed)?2:1;state.score+=(points+Math.min(500,state.combo*3))*mult;hitSound(judgement);tone(label==='FLICK'?1080:880,.055,.030,'sine',.015);burstAt(n.el,judgement);showJudgement(n.el,label==='FLICK'?'FLICK':judgement);removeNote(n.id);maybeStartFever(elapsed);
   }
 
 
@@ -1636,7 +1637,7 @@ body.mobile-build .result-actions button{min-height:50px}
       data.pointerId = e.pointerId;
       note.classList.add('held');
       try { note.setPointerCapture(e.pointerId); } catch (_) {}
-      tone(360,.035,.018,'triangle');
+      tone(360,.035,.030,'triangle');
     });
 
     note.addEventListener('pointermove', e => {
@@ -1737,7 +1738,7 @@ body.mobile-build .result-actions button{min-height:50px}
     const mult=isFeverActive(elapsed)?2:1;
     state.score += (points + centerBonus + Math.min(500,state.combo*3))*mult;
     hitSound(judgement);
-    tone(940,.06,.018,'sine',.025);
+    tone(940,.06,.030,'sine',.025);
     burstAt(n.el, judgement);
     showJudgement(n.el, judgement);
     removeNote(n.id);
